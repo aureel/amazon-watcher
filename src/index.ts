@@ -14,6 +14,9 @@ cronConfig.forEach((config) => {
     cronRule,
     async () => {
       try {
+        // eslint-disable-next-line no-console
+        console.log("Running Cron", config);
+
         if (amazonProductId == null) {
           throw new Error("Missing `amazonProductId`");
         }

@@ -4,6 +4,23 @@ import cheerio from "cheerio";
 const USER_AGENT =
   "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/78.0.3904.108 Safari/537.36";
 
+let browserWSEndpoint: string | null = null;
+
+async function _getBrowser(): Promise<puppeteer.Browser> {
+  if (browserWSEndpoint != null) {
+    // reconnect to previously used Chromium
+    return puppeteer.connect({ browserWSEndpoint });
+  }
+
+  // start a brand new browser
+  const browser = await puppeteer.launch();
+
+  // store WS endpoint in oder to be able to reconnect to Chromium
+  browserWSEndpoint = browser.wsEndpoint();
+
+  return browser;
+}
+
 function _convertStrToFloat(str) {
   return parseFloat(str.replace(/,/g, ""));
 }
@@ -28,7 +45,7 @@ async function getPricesFromAmazonProductPage(params: { amazonProductId: string 
 
   const pageUrl = `https://www.amazon.ca/dp/${amazonProductId}/ref=olp_aod_early_redir?_encoding=UTF8&aod=1`;
 
-  const browser = await puppeteer.launch();
+  const browser = await _getBrowser();
 
   const page = await browser.newPage();
   page.setUserAgent(USER_AGENT);
@@ -38,7 +55,7 @@ async function getPricesFromAmazonProductPage(params: { amazonProductId: string 
 
   const { availablePrices, productTitle } = _getAvailablePricesFromHtml(await page.content());
 
-  await browser.close();
+  await browser.disconnect();
 
   return { availablePrices, productTitle };
 }
