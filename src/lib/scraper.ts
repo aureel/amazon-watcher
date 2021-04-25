@@ -4,7 +4,10 @@ import cheerio from "cheerio";
 const USER_AGENT =
   "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/78.0.3904.108 Safari/537.36";
 
-let browserWSEndpoint: string | null = null;
+let browserWSEndpoint: string | null =
+  process.env.BROWSERLESS_API_TOKEN != null
+    ? `wss://chrome.browserless.io?token=${process.env.BROWSERLESS_API_TOKEN}`
+    : null;
 
 async function _getBrowser(): Promise<puppeteer.Browser> {
   if (browserWSEndpoint != null) {
