@@ -1,7 +1,6 @@
 import _ from "lodash";
 import cheerio from "cheerio";
 import puppeteer from "puppeteer";
-import useProxy from "puppeteer-page-proxy";
 import UserAgent from "user-agents";
 
 const generateUserAgent = new UserAgent({
@@ -32,10 +31,10 @@ function _convertStrToFloat(str): number {
   return parseFloat(str.replace(/,/g, ""));
 }
 
-function _getProxyUrl(proxyUrls: string): string {
-  // return one of the proxy urls randomly
-  return _.sample(proxyUrls.split(","));
-}
+// function _getProxyUrl(proxyUrls: string): string {
+//   // return one of the proxy urls randomly
+//   return _.sample(proxyUrls.split(","));
+// }
 
 function _getProductTitleAndPricesFromHtml(html: string) {
   const $ = cheerio.load(html);
@@ -67,10 +66,6 @@ async function getPricesFromAmazonProductPage(params: { amazonProductId: string 
     const page = await browser.newPage();
     page.setUserAgent(generateUserAgent().toString());
     page.setViewport({ width: 2560, height: 1540 });
-
-    if (process.env.PROXY_URLS != null) {
-      await useProxy(page, _getProxyUrl(process.env.PROXY_URLS));
-    }
 
     await page.goto(pageUrl);
 
