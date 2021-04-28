@@ -1,8 +1,12 @@
-import puppeteer from "puppeteer";
+import _ from "lodash";
 import cheerio from "cheerio";
+import puppeteer from "puppeteer";
+import useProxy from "puppeteer-page-proxy";
+import UserAgent from "user-agents";
 
-const USER_AGENT =
-  "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/78.0.3904.108 Safari/537.36";
+const generateUserAgent = new UserAgent({
+  deviceCategory: "desktop",
+});
 
 let browserWSEndpoint: string | null =
   process.env.BROWSERLESS_API_TOKEN != null
@@ -24,8 +28,13 @@ async function _getBrowser(): Promise<puppeteer.Browser> {
   return browser;
 }
 
-function _convertStrToFloat(str) {
+function _convertStrToFloat(str): number {
   return parseFloat(str.replace(/,/g, ""));
+}
+
+function _getProxyUrl(proxyUrls: string): string {
+  // return one of the proxy urls randomly
+  return _.sample(proxyUrls.split(","));
 }
 
 function _getAvailablePricesFromHtml(html: string) {
@@ -51,8 +60,12 @@ async function getPricesFromAmazonProductPage(params: { amazonProductId: string 
   const browser = await _getBrowser();
 
   const page = await browser.newPage();
-  page.setUserAgent(USER_AGENT);
+  page.setUserAgent(generateUserAgent().toString());
   page.setViewport({ width: 2560, height: 1540 });
+
+  if (process.env.PROXY_URLS != null) {
+    await useProxy(page, _getProxyUrl(process.env.PROXY_URLS));
+  }
 
   await page.goto(pageUrl);
 
