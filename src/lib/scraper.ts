@@ -37,10 +37,14 @@ function _getProxyUrl(proxyUrls: string): string {
   return _.sample(proxyUrls.split(","));
 }
 
-function _getAvailablePricesFromHtml(html: string) {
+function _getProductTitleAndPricesFromHtml(html: string) {
   const $ = cheerio.load(html);
 
   const productTitle = $("#productTitle").text().trim();
+
+  if (_.isEmpty(productTitle)) {
+    throw new Error("The product information could not be found");
+  }
 
   const prices = $("div#aod-offer-list div#aod-offer-price span.a-price-whole");
 
@@ -59,21 +63,25 @@ async function getPricesFromAmazonProductPage(params: { amazonProductId: string 
 
   const browser = await _getBrowser();
 
-  const page = await browser.newPage();
-  page.setUserAgent(generateUserAgent().toString());
-  page.setViewport({ width: 2560, height: 1540 });
+  try {
+    const page = await browser.newPage();
+    page.setUserAgent(generateUserAgent().toString());
+    page.setViewport({ width: 2560, height: 1540 });
 
-  if (process.env.PROXY_URLS != null) {
-    await useProxy(page, _getProxyUrl(process.env.PROXY_URLS));
+    if (process.env.PROXY_URLS != null) {
+      await useProxy(page, _getProxyUrl(process.env.PROXY_URLS));
+    }
+
+    await page.goto(pageUrl);
+
+    const { availablePrices, productTitle } = _getProductTitleAndPricesFromHtml(
+      await page.content()
+    );
+
+    return { availablePrices, productTitle };
+  } finally {
+    await browser.disconnect();
   }
-
-  await page.goto(pageUrl);
-
-  const { availablePrices, productTitle } = _getAvailablePricesFromHtml(await page.content());
-
-  await browser.disconnect();
-
-  return { availablePrices, productTitle };
 }
 
 export { getPricesFromAmazonProductPage };
