@@ -7,20 +7,30 @@ const generateUserAgent = new UserAgent({
   deviceCategory: "desktop",
 });
 
-let browserWSEndpoint: string | null =
-  process.env.BROWSER_WS_ENDPOINT != null ? process.env.BROWSER_WS_ENDPOINT : null;
+// let browserWSEndpoint: string | null =
+//   process.env.BROWSER_WS_ENDPOINT != null ? process.env.BROWSER_WS_ENDPOINT : null;
+
+function _getProxyUrlFromPool(proxyUrls: string): string {
+  // return one of the proxy urls randomly
+  return _.sample(proxyUrls.split(","));
+}
 
 async function _getBrowser(): Promise<puppeteer.Browser> {
-  if (browserWSEndpoint != null) {
-    // reconnect to previously used Chromium
-    return puppeteer.connect({ browserWSEndpoint });
+  // if (browserWSEndpoint != null) {
+  //   // reconnect to previously used Chromium
+  //   return puppeteer.connect({ browserWSEndpoint });
+  // }
+
+  const args: string[] = [];
+  if (process.env.PROXY_URLS != null) {
+    args.push(`--proxy-server=${_getProxyUrlFromPool(process.env.PROXY_URLS)}`);
   }
 
   // start a brand new browser
-  const browser = await puppeteer.launch();
+  const browser = await puppeteer.launch({ args });
 
   // store WS endpoint in oder to be able to reconnect to Chromium
-  browserWSEndpoint = browser.wsEndpoint();
+  // browserWSEndpoint = browser.wsEndpoint();
 
   return browser;
 }
@@ -28,11 +38,6 @@ async function _getBrowser(): Promise<puppeteer.Browser> {
 function _convertStrToFloat(str): number {
   return parseFloat(str.replace(/,/g, ""));
 }
-
-// function _getProxyUrl(proxyUrls: string): string {
-//   // return one of the proxy urls randomly
-//   return _.sample(proxyUrls.split(","));
-// }
 
 function _getProductTitleAndPricesFromHtml(html: string) {
   const $ = cheerio.load(html);
@@ -73,7 +78,7 @@ async function getPricesFromAmazonProductPage(params: { amazonProductId: string 
 
     return { availablePrices, productTitle };
   } finally {
-    await browser.disconnect();
+    await browser.close();
   }
 }
 
