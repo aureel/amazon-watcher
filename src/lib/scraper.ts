@@ -8,9 +8,7 @@ const generateUserAgent = new UserAgent({
 });
 
 let browserWSEndpoint: string | null =
-  process.env.BROWSERLESS_API_TOKEN != null
-    ? `wss://chrome.browserless.io?token=${process.env.BROWSERLESS_API_TOKEN}`
-    : null;
+  process.env.BROWSER_WS_ENDPOINT != null ? process.env.BROWSER_WS_ENDPOINT : null;
 
 async function _getBrowser(): Promise<puppeteer.Browser> {
   if (browserWSEndpoint != null) {
