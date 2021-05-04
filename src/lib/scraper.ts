@@ -3,6 +3,8 @@ import cheerio from "cheerio";
 import puppeteer from "puppeteer";
 import UserAgent from "user-agents";
 
+import { generateAmazonLink } from "../helpers/generate-amazon-link";
+
 const generateUserAgent = new UserAgent({
   deviceCategory: "desktop",
 });
@@ -61,7 +63,7 @@ function _getProductTitleAndPricesFromHtml(html: string) {
 async function getPricesFromAmazonProductPage(params: { amazonProductId: string }) {
   const { amazonProductId } = params;
 
-  const pageUrl = `https://www.amazon.ca/dp/${amazonProductId}/ref=olp_aod_early_redir?_encoding=UTF8&aod=1`;
+  const pageUrl = generateAmazonLink(amazonProductId);
 
   const browser = await _getBrowser();
 
