@@ -75,7 +75,7 @@ async function getPricesFromAmazonProductPage(params: { amazonProductId: string 
     await page.goto(pageUrl);
 
     // wait for prices to be available on the page
-    await page.waitForSelector("span.a-price-whole", { timeout: 15000 });
+    await page.waitForSelector("div#aod-offer-list", { timeout: 20000 });
 
     const { availablePrices, productTitle } = _getProductTitleAndPricesFromHtml(
       await page.content()
