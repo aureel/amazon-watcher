@@ -7,6 +7,14 @@ import "./init-sentry";
 import { scrapeAmazonAndNotify } from "./lib/scrape-and-notify";
 import { cronConfig } from "./cron-config";
 
+const ERROR_NAMES_TO_IGNORE_IN_SENTRY = ["TimeoutError"];
+
+function _logInSentry(err: Error): boolean {
+  return (
+    process.env.NODE_ENV === "production" && !ERROR_NAMES_TO_IGNORE_IN_SENTRY.includes(err.name)
+  );
+}
+
 cronConfig.forEach((config) => {
   const { cronRule, amazonProductId, priceThreshold } = config;
 
@@ -25,7 +33,10 @@ cronConfig.forEach((config) => {
       } catch (err) {
         // eslint-disable-next-line no-console
         console.error(err);
-        Sentry.captureException(err);
+
+        if (_logInSentry(err)) {
+          Sentry.captureException(err);
+        }
       }
     },
     {

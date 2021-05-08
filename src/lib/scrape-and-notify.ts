@@ -10,7 +10,7 @@ async function scrapeAmazonAndNotify(params: { amazonProductId: string; priceThr
   // eslint-disable-next-line no-console
   console.log({ productTitle, availablePrices, priceThreshold });
 
-  await notifyPrices({ productTitle, prices: availablePrices, priceThreshold });
+  await notifyPrices({ amazonProductId, productTitle, prices: availablePrices, priceThreshold });
 }
 
 export { scrapeAmazonAndNotify };

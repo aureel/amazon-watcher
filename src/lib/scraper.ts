@@ -1,37 +1,54 @@
-import puppeteer from "puppeteer";
+import _ from "lodash";
 import cheerio from "cheerio";
+import puppeteer from "puppeteer";
+import UserAgent from "user-agents";
 
-const USER_AGENT =
-  "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/78.0.3904.108 Safari/537.36";
+import { generateAmazonLink } from "../helpers/generate-amazon-link";
 
-let browserWSEndpoint: string | null =
-  process.env.BROWSERLESS_API_TOKEN != null
-    ? `wss://chrome.browserless.io?token=${process.env.BROWSERLESS_API_TOKEN}`
-    : null;
+const generateUserAgent = new UserAgent({
+  deviceCategory: "desktop",
+});
+
+// let browserWSEndpoint: string | null =
+//   process.env.BROWSER_WS_ENDPOINT != null ? process.env.BROWSER_WS_ENDPOINT : null;
+
+function _getProxyUrlFromPool(proxyUrls: string): string {
+  // return one of the proxy urls randomly
+  return _.sample(proxyUrls.split(","));
+}
 
 async function _getBrowser(): Promise<puppeteer.Browser> {
-  if (browserWSEndpoint != null) {
-    // reconnect to previously used Chromium
-    return puppeteer.connect({ browserWSEndpoint });
+  // if (browserWSEndpoint != null) {
+  //   // reconnect to previously used Chromium
+  //   return puppeteer.connect({ browserWSEndpoint });
+  // }
+
+  const args: string[] = [];
+  if (process.env.PROXY_URLS != null) {
+    args.push(`--proxy-server=${_getProxyUrlFromPool(process.env.PROXY_URLS)}`);
   }
 
   // start a brand new browser
-  const browser = await puppeteer.launch();
+  const browser = await puppeteer.launch({ args });
 
   // store WS endpoint in oder to be able to reconnect to Chromium
-  browserWSEndpoint = browser.wsEndpoint();
+  // browserWSEndpoint = browser.wsEndpoint();
 
   return browser;
 }
 
-function _convertStrToFloat(str) {
+function _convertStrToFloat(str): number {
   return parseFloat(str.replace(/,/g, ""));
 }
 
-function _getAvailablePricesFromHtml(html: string) {
+function _getProductTitleAndPricesFromHtml(html: string) {
   const $ = cheerio.load(html);
 
   const productTitle = $("#productTitle").text().trim();
+
+  if (_.isEmpty(productTitle)) {
+    throw new Error("The product information could not be found");
+  }
 
   const prices = $("div#aod-offer-list div#aod-offer-price span.a-price-whole");
 
@@ -46,21 +63,28 @@ function _getAvailablePricesFromHtml(html: string) {
 async function getPricesFromAmazonProductPage(params: { amazonProductId: string }) {
   const { amazonProductId } = params;
 
-  const pageUrl = `https://www.amazon.ca/dp/${amazonProductId}/ref=olp_aod_early_redir?_encoding=UTF8&aod=1`;
+  const pageUrl = generateAmazonLink(amazonProductId);
 
   const browser = await _getBrowser();
 
-  const page = await browser.newPage();
-  page.setUserAgent(USER_AGENT);
-  page.setViewport({ width: 2560, height: 1540 });
+  try {
+    const page = await browser.newPage();
+    page.setUserAgent(generateUserAgent().toString());
+    page.setViewport({ width: 2560, height: 1540 });
 
-  await page.goto(pageUrl);
+    await page.goto(pageUrl);
 
-  const { availablePrices, productTitle } = _getAvailablePricesFromHtml(await page.content());
+    // wait for prices to be available on the page
+    await page.waitForSelector("div#aod-offer-list", { timeout: 20000 });
 
-  await browser.disconnect();
+    const { availablePrices, productTitle } = _getProductTitleAndPricesFromHtml(
+      await page.content()
+    );
 
-  return { availablePrices, productTitle };
+    return { availablePrices, productTitle };
+  } finally {
+    await browser.close();
+  }
 }
 
 export { getPricesFromAmazonProductPage };

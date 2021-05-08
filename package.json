@@ -21,7 +21,8 @@
     "node-cron": "^3.0.0",
     "puppeteer": "^8.0.0",
     "slimbot": "^5.1.0",
-    "typescript": "^4.2.4"
+    "typescript": "^4.2.4",
+    "user-agents": "^1.0.635"
   },
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^4.22.0",
